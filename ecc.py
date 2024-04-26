@@ -71,35 +71,72 @@ def est_elliptique(E):
     E : un triplet (p, a, b) représentant la courbe d'équation
     y^2 = x^3 + ax + b sur F_p, p > 3
     """
-
-    return 
+    p , a , b = E
+    return (-16*(4*exp(a , 3 , p) + 27 * exp(b , 2 , p)) )% p != 0
 
 
 def point_sur_courbe(P, E):
     """Renvoie True si le point P appartient à la courbe E et False sinon."""
-
-    return
+    if P == () : return True
+    p , a , b = E
+    x , y = P
+    return exp(y , 2 , p) == ( (exp(x , 3 , p) + a*x + b) % p)
 
 
 def symbole_legendre(a, p):
     """Renvoie le symbole de Legendre de a mod p."""
     
-    return 
+    return exp(a , (p-1)//2 , p) #car vaut 0 si p divise a : direct.   
+    #Vaut 1 si il existe b t.q a = b**2 mod p car par fermat b**(2 * (p - 1)/2) = b ** (p-1) = 1 mod p (fermat p premier)
+    #Vaut -1 sinon car supposons a ** ((p-1)/2) != -1 ---> a ** 2((p-1)/2) != (-1)**2 != 1 mod p (ce qui contredit le theoreme de fermat d'ou si a n est ni un carre ni un multiple de p alors il ne reste que a n est pas un carre qui est qssocie a la valeur -1 )
 
+def def_value(): 
+    return set()
+      
+from collections import defaultdict 
 
 def cardinal(E):
     """Renvoie le cardinal du groupe de points de la courbe E."""
-    
-    return
+    res = 1
+    (p , a , b) = E
+    dic = defaultdict(def_value)
+    dic[0].add(0)
+    for i in range(1 , p//2 + 1):
+        y2 = exp(i , 2 , p)
+        dic[y2].add(i) 
+        dic[y2].add(-i) 
+
+    for j in range(p):
+        y2 = ((exp(j , 3 , p) + a*j + b) % p)
+        if y2 in dic:
+            res += len(dic[y2])
+
+    return res
 
 
 def liste_points(E):
     """Renvoie la liste des points de la courbe elliptique E."""
     p, a, b = E
 
-    assert p % 4 == 3, "erreur: p n'est pas congru à 3 mod 4."
+    assert p % 4 == 3, "erreur: p n'est pas congru à 3 mod 4." #a**2((p+1)/4) = a**2((p-1+2)/4) = a**((p-1)/2) * a = 1 * a mod p = a mod p (avant derniere egalité par quest 3) 
+    #(p+1)/4 est un entier car p est congru a 3 mod 4 donc il existe k >0 t.q p = 4k + 3 d'ou p + 1 = 4k + 4 ---> (p+1)/4 = k + 1
 
-    return
+    li = [()]
+    for x in range(p):
+        y2 = ((exp(x , 3 , p) + a*x + b) % p)
+        
+ #       if symbole_legendre(y2 , p) == 0:
+        if y2 == 0:
+            li.append((x , 0))
+        elif symbole_legendre(y2 , p) == 1:
+            rac = exp(y2 , (p+1)//4 , p)
+            if rac == 0:
+                li.append(x , rac)
+            else:
+                li.append((x , p - rac))        
+                li.append((x , rac))
+
+    return li
 
 
 def cardinaux_courbes(p):
