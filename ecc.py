@@ -1,7 +1,7 @@
 # Sorbonne Université LU3IN024 2021-2022
 # TME 5 : Cryptographie à base de courbes elliptiques
 #
-# Etudiant.e 1 : NOM ET NUMERO D'ETUDIANT
+# Etudiant.e 1 : Samaha Elio 21105733
 # Etudiant.e 2 : NOM ET NUMERO D'ETUDIANT
 
 from math import sqrt
@@ -125,7 +125,6 @@ def liste_points(E):
     for x in range(p):
         y2 = ((exp(x , 3 , p) + a*x + b) % p)
         
- #       if symbole_legendre(y2 , p) == 0:
         if y2 == 0:
             li.append((x , 0))
         elif symbole_legendre(y2 , p) == 1:
@@ -138,6 +137,10 @@ def liste_points(E):
 
     return li
 
+#Q6 : Soit p un nombre premier, p +1−2√p⩽|Ea,b| ⩽ p+1+2√p
+
+import math
+from itertools import product
 
 def cardinaux_courbes(p):
     """
@@ -146,7 +149,12 @@ def cardinaux_courbes(p):
     Renvoie un dictionnaire D où D[i] contient le nombre de courbes elliptiques
     de cardinal i sur F_p.
     """
-    D = {}
+    D = defaultdict(lambda : 0)
+    
+    for a , b in product(range(p) , range(p)): #on essaye tous les couples (a,b) possibles et on calcule le cardinale de E(a,b)
+        if est_elliptique((p , a , b)):
+            card = cardinal((p , a , b))
+            D[card] += 1
     
     return D
 
@@ -160,43 +168,123 @@ def dessine_graphe(p):
     plt.bar(C, [D[c] for c in C], color='b')
     plt.show()
 
+#dessine_graphe(5)
 
 def moins(P, p):
     """Retourne l'opposé du point P mod p."""
-
-    return 
+    if P == ():
+        return () 
+    p1 , p2 = P
+    return (p1 , p - p2)
 
 
 def est_egal(P1, P2, p):
     """Teste l'égalité de deux points mod p."""
 
-    return
+    if P1 == ():
+        return P2 == ()
+    if P2 == ():
+        return P1 == ()
+
+    x1 , y1 = P1
+    x2 , y2 = P2
+
+    return ((x1 % p) == (x2 % p)) and ((y1 % p) == (y2 % p)) 
 
 
 def est_zero(P):
     """Teste si un point est égal au point à l'infini."""
 
-    return
+    return P == ()
 
 
 def addition(P1, P2, E):
     """Renvoie P1 + P2 sur la courbe E."""
+    p , a , b = E
     
-    return
+    if est_zero(P1):
+        return P2
+    if est_zero(P2):
+        return P1
 
+    if est_egal(P1 , moins(P2 , p) , p):
+        return ()
+
+    x1 , y1 = P1
+    x2 , y2 = P2
+
+    if est_egal(P1 , P2, p):
+        lbda = ((3 * exp(x1 , 2 , p) + a) * inv_mod(2*y1 , p)) % p
+    else :
+        lbda = ((y2 - y1) * inv_mod(x2 - x1 , p)) % p
+    
+    x3 = (pow(lbda , 2 , p) - x1 - x2) % p
+    y3 = (lbda * (x1- x3) - y1) % p
+
+    return (x3 , y3)
+
+def multiplication_scalaire_aux(k, P, E, lookup): #memoization inutile mais bon
+
+    p , a , b = E
+
+    if k in lookup : return lookup[k]
+
+    if k in lookup:
+        return lookup[k]
+
+    if k < 0 :
+        lookup[k] = moins(multiplication_scalaire_aux(-k , P , E , lookup) , p)
+        return lookup[k]
+
+    if k % 2 == 0: #k = 2k' --> res = k' * P + k' * P
+        k_sur_2_P = multiplication_scalaire_aux(k // 2, P, E, lookup)
+        lookup[k] = addition(k_sur_2_P, k_sur_2_P, E)
+    else: #k = 2k' + 1 --> res = k' * P + k' * P + P
+        k_sur_2_P = multiplication_scalaire_aux(k // 2, P, E, lookup)
+        even_part = addition(k_sur_2_P, k_sur_2_P, E)
+        lookup[k] = addition(even_part, P, E)
+
+    lookup[k//2] = k_sur_2_P
+
+    return lookup[k]
 
 def multiplication_scalaire(k, P, E):
     """Renvoie la multiplication scalaire k*P sur la courbe E."""
-    
-    return
+    p , _ , _ = E
+    lookup = {0 : ()}
+    return multiplication_scalaire_aux(k, P, E , lookup)
+
 
 
 def ordre(N, factors_N, P, E):
     """Renvoie l'ordre du point P dans les points de la courbe E mod p. 
     N est le nombre de points de E sur Fp.
     factors_N est la factorisation de N en produit de facteurs premiers."""
+    p , a , b = E
+    if P == () : return 1
 
-    return 
+    power_ranges = []
+
+    for p, vp in factors_N:     
+        power_ranges.append(range(vp + 1)) #on cree une liste de liste chacune contenant [0 , vp] representant les choix de puissances qu on a pour chaque p
+
+    divisor_powers = list(product(*power_ranges)) #on prend toute les combinaisons de puissance
+
+    div = []
+
+    for powers in divisor_powers:
+        divisor = 1
+        for (p, power) in zip(factors_N, powers): #on parcours nos combinaison en tenant compte du comptage de chaque puissance pour chaque p grace au zip 
+            prime = p[0]
+            divisor *= prime ** power   #on cree un nouveau diviseur en faisant un nouveau produit de sous diviseurs qui sont tous premiers
+        div.append(divisor)
+
+    div.sort()  #on commence par le plus petit vers le plus grand et on s'arrete des que [d]P s annule et on renvoie le diviseur "d" correspondant soit l'ordre de l'element P.
+    for d in div :
+        if est_zero(multiplication_scalaire(d , P , E)):
+            return d
+
+    return -1 #controle d erreur
 
 
 def point_aleatoire_naif(E):
