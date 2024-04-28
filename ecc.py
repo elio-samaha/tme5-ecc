@@ -1,7 +1,7 @@
 # Sorbonne Université LU3IN024 2021-2022
 # TME 5 : Cryptographie à base de courbes elliptiques
 #
-# Etudiant.e 1 : Samaha Elio 21105733
+# Etudiant.e 1 : Samaha Elio, 21105733
 # Etudiant.e 2 : NOM ET NUMERO D'ETUDIANT
 
 from math import sqrt
@@ -86,9 +86,11 @@ def point_sur_courbe(P, E):
 def symbole_legendre(a, p):
     """Renvoie le symbole de Legendre de a mod p."""
     
-    return exp(a , (p-1)//2 , p) #car vaut 0 si p divise a : direct.   
+    return exp(a , (p-1)//2 , p) 
+    #car vaut 0 si p divise a : direct. ( a = 0 mod p donc a**((p - 1)/2)) = 0 mod p qui represente la bonne valeur du symbole de legendre   
     #Vaut 1 si il existe b t.q a = b**2 mod p car par fermat b**(2 * (p - 1)/2) = b ** (p-1) = 1 mod p (fermat p premier)
-    #Vaut -1 sinon car supposons a ** ((p-1)/2) != -1 ---> a ** 2((p-1)/2) != (-1)**2 != 1 mod p (ce qui contredit le theoreme de fermat d'ou si a n est ni un carre ni un multiple de p alors il ne reste que a n est pas un carre qui est qssocie a la valeur -1 )
+    #Vaut -1 sinon ("sinon" au sens où a n'est pas un résidu quadratique, donc il n'existe pas de b tel que a = b^2 mod p) car supposons a ** ((p-1)/2) != -1 ---> a ** 2((p-1)/2) != (-1)**2 != 1 mod p (ce qui contredit le theoreme de fermat d'ou si a n est ni un carre ni un multiple de p alors il ne reste que a n est pas un carre qui est qssocie a la valeur -1 )
+    # a n'est pas un résidu quadratique, donc il n'existe pas de b tel que a = b^2 mod p.
 
 def def_value(): 
     return set()
@@ -287,30 +289,92 @@ def ordre(N, factors_N, P, E):
     return -1 #controle d erreur
 
 
+# import numpy as np
+
+# def point_aleatoire_naif(E):
+#     # """Renvoie un point aléatoire (différent du point à l'infini) sur la courbe E."""
+#     p, a , b = E 
+#     x , y = np.random.randint(0 , p , size = 2 , dtype=np.int64)
+    
+#     while not point_sur_courbe((x,y) , E):
+#         x , y = np.random.randint(0 , p , size = 2 , dtype=np.int64)
+
+#     return (x,y) 
+
+
+#Question 11: Comme c'est une proba uniforme, alors on a |Card(E) - 1| / (p-1)**2 de chance d'avoir un point sur la courbe (|Card(E) - 1| car on enleve le point a l'infini et (p-1)**2 car on a p-1 possibilite pour x et de meme pour y)
+#Or par le theoreme de Hasse : p +1−2√p⩽|Ea,b| ⩽ p+1+2√p donc on peut mieux approximer la chance d'avoir un point de la courbe : Au moins  (p +1−2√p) / (p-1)**2 et au plus (p+1+2√p) / (p-1)**2 
+#qui s'approxime a 1/p (equivalent a 1/p) ---> Complexite amorti en O(p) car on trouve un point de la courbe chaque p tirages.
+
+
+import numpy as np
+import random
+
 def point_aleatoire_naif(E):
     """Renvoie un point aléatoire (différent du point à l'infini) sur la courbe E."""
+    p, a, b = E
     
-    return 
+    x = random.randint(0, p - 1)
+    y = random.randint(0, p - 1)
+    
+    while not point_sur_courbe((x, y), E):
+        x = random.randint(0, p - 1)
+        y = random.randint(0, p - 1)
+
+    return (x, y)
+
+#Question 11: Comme c'est une proba uniforme, alors on a |Card(E) - 1| / (p-1)**2 de chance d'avoir un point sur la courbe (|Card(E) - 1| car on enleve le point a l'infini et (p-1)**2 car on a p-1 possibilite pour x et de meme pour y)
+#Or par le theoreme de Hasse : p +1−2√p⩽|Ea,b| ⩽ p+1+2√p donc on peut mieux approximer la chance d'avoir un point de la courbe : Au moins  (p +1−2√p) / (p-1)**2 et au plus (p+1+2√p) / (p-1)**2 
+#qui s'approxime a 1/p (equivalent a 1/p) ---> Complexite amorti en O(p) car on trouve un point de la courbe chaque p tirages.
+
+# print(point_aleatoire_naif((360040014289779780338359, 117235701958358085919867, 18575864837248358617992)))
+
+#TRES LONGGG !!!
+
 
 
 def point_aleatoire(E):
     """Renvoie un point aléatoire (différent du point à l'infini) sur la courbe E."""
+    p, a, b = E
 
-    return
+    assert p % 4 == 3, "erreur: p n'est pas congru à 3 mod 4."
+    
+    x = random.randint(0, p - 1)
+    y2 = ((exp(x , 3 , p) + a*x + b) % p)
+    while symbole_legendre(y2 , p) != 1:
+        x = random.randint(0, p - 1)
+        y2 = ((exp(x , 3 , p) + a*x + b) % p)
+
+    yp = exp(y2 , (p+1)//4 , p)
+    y = random.choice([yp , p - yp]) #choisir entre la racine "positive" ou "negative" pas de convention sur les racines appliquéees ici pour pouvoir obtenir tous les points de la courbe.  
+
+    return (x,y) 
+
+#E = (360040014289779780338359, 117235701958358085919867, 18575864837248358617992)
+#print(point_aleatoire(E)) #TRES RAPIDE !!!!
+
+#Question 12 : pour chaque y**2 calcule, on (p-1)/2 de chance de tomber sur un residu quadratique, soit 1 chance sur 2 ! donc on tire x aleatoirement, on calcule y2 et on s'assure que c est un carre
+#tomber sur un residu quadratique (pour chaque tirage) est une variable aleatoire qui suit une loi de bernoulli de parametre(1/2). Au pire des cas on doit faire (p-1)/2 tirages avant de tomber sur 
+#un residu quadratique mais la probabilite de prendre n tirage avant de tomber sur y2 decroit exponentiellement car (P(y2 au n-ieme tirage) = (1/2)**n ) Donc complexite amorti en O(1) et pire des cas en O(p) mais tres peu probable.
 
 
 def point_ordre(E, N, factors_N, n):
-    """Renvoie un point aléatoire d'ordre N sur la courbe E.
+    """Renvoie un point aléatoire d'ordre N (n plutot ?) sur la courbe E.
     Ne vérifie pas que n divise N."""
+    assert N % n == 0
 
-    return
+    P = point_aleatoire(E)
+    while ordre(N , factors_N , P , E) != n:
+        P = point_aleatoire(E)
+
+    return P
 
 def keygen_DH(P, E, n):
     """Génère une clé publique et une clé privée pour un échange Diffie-Hellman.
     P est un point d'ordre n sur la courbe E.
     """
-    sec = None # A remplacer
-    pub = None # A remplacer
+    sec = random.randint(1 , p-1)
+    pub = multiplication_scalaire(sec , P , E)
     
     return (sec, pub)
 
@@ -318,4 +382,35 @@ def echange_DH(sec_A, pub_B, E):
     """Renvoie la clé commune à l'issue d'un échange Diffie-Hellman.
     sec_A est l'entier secret d'Alice et pub_b est l'entier public de Bob."""
 
-    return
+    return multiplication_scalaire(sec_A , pub_B , E)
+
+p = 248301763022729027652019747568375012323
+a = 1
+b = 0
+E = p , a , b # y**2 = x**3 + x 
+N = 248301763022729027652019747568375012324
+factors_N = [(2, 2), (62075440755682256913004936892093753081, 1)]
+
+# On a besoin d'un generateur de E(1,0) sinon on peut casser le DHM tres facilement en essayant toutes les combinaisons jusqu'a trouver la cle publique A (l'exposant/coefficient multiplicatif sera alors la cle secrete d'Alice)
+# la cle secrete doit etre prise aleatoirement comme dit dans le cours.
+# Trouver le Generateur P : etre generateur c'est avoir un ordre tres eleve (= N pour une definition formelle mais en realite on n en pas necessairement besoin (Theoreme de structure avec d1 != 1 et Z/d2Z assez grand ?)). 
+# Par le theoreme de Lagrange ord(P) | N et on veut que l'ordre soit tres grand voir egale a N. 
+n = pow(2 , 2) * 62075440755682256913004936892093753081 # = N
+print(point_ordre(E, N, factors_N, n)) # On cherche un poit d'ordre N (= n)
+
+# Apres avoir teste on trouve qu'il existe en effet un point d'ordre N (donc ce groupe est cyclique avec d1 = 1 et d2 = N-1) on prend par exemple
+P = (207716757254120177618976224591773578847, 42218605672154150286197221526434695806)
+print(ordre(N, factors_N, P , E) == N) # = True --> P est un generateur de E(a = 1 , b = 0)
+
+#On peut appliquer DHM sans probleme avec les fonction qu'on a implemente avant. Exemple : Faisons l'echange de cle et trouvons la cle K
+
+# Publique : g = P , a = (1 , 0) , p = p
+# Prive : alpha aleatoirement et calcule A, la cle publique de Alice (de meme B pour Bob)
+(sec_A, pub_A) = keygen_DH(P , E , N)
+(sec_B , pub_B) = keygen_DH(P , E , N)
+
+# On calcule K et on s'assure que c'est la bonne valeur en s'assurant qu'on trouve le meme K en passant par Alice et Bob 
+print("K =" , K := echange_DH(sec_A , pub_B , E) , K == echange_DH(sec_B , pub_A , E)) #Rend : K = (163174482599858722001980027074631255504, 193898410074299688857933233722489011533) True
+
+
+
