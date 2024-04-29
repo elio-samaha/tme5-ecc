@@ -373,7 +373,7 @@ def keygen_DH(P, E, n):
     """Génère une clé publique et une clé privée pour un échange Diffie-Hellman.
     P est un point d'ordre n sur la courbe E.
     """
-    sec = random.randint(1 , p-1)
+    sec = random.randint(1 , n-1)
     pub = multiplication_scalaire(sec , P , E)
     
     return (sec, pub)
